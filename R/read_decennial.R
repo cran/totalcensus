@@ -24,15 +24,15 @@
 #'       "Boston city, MA", and "Lincoln town, RI". And special examples like
 #'       "Salt Lake City city, UT" must keep the "city" after "City".
 #' @param geo_headers vector of references of selected geographci headers to be
-#'        included in the return. Browse geoheaders in \code{\link{dict_decennial_geoheader}}
-#'        or search with \code{\link{search_geoheaders}}
-#' @param summary_level select which summary level to keep, "*" to keep all. It takes strings
+#'        included in the return. Search with \code{\link{search_geoheaders}}
+#' @param summary_level select which summary level to keep, default to keep all. It takes strings
 #'        including "state", "county", "county subdivision", "place", "tract", "block group",
 #'        and "block" for the most common levels. It also take code for level. Search all codes with
-#'        \code{\link{search_summarylevels}} or browse \code{\link{dict_decennial_summarylevel}} .
+#'        \code{\link{search_summarylevels}}.
 #' @param geo_comp select which geographic component to keep, "*" to keep every geo-component,
 #'        "total" for "00", "urban" for "01", "urbanized area" for "04",
-#'        "urban cluster" for "28", "rural" for "43". Others should input code
+#'        "urban cluster" for "28", "rural" for "43". For all other geographic component,
+#'         use code,
 #'        which can be found with \code{\link{search_geocomponents}}. Availability
 #'        of geocomponent depends on summary level. State level contains all
 #'        geographic component. County subdivision and higher level have "00",
@@ -93,7 +93,7 @@ read_decennial <- function(year,
                           table_contents = NULL,
                           areas = NULL,
                           geo_headers = NULL,
-                          summary_level = "*",
+                          summary_level = NULL,
                           geo_comp = "total",
                           show_progress = TRUE){
 
@@ -105,6 +105,8 @@ read_decennial <- function(year,
         ))
         return(NULL)
     }
+
+    if (is.null(summary_level)) summary_level <- "*"
 
     # allow lowerscase input
     states <- toupper(states)
@@ -118,9 +120,18 @@ read_decennial <- function(year,
     }
 
     # check whether to download census data
+    if (year == 2010) {
+        ext <- ".ur1"
+    } else if (year == 2000){
+        ext <- ".uf1"
+    }
     not_downloaded <- c()
     for (st in states){
-        if (!file.exists(paste0(path_to_census, "/census", year, "/", st))){
+        geo_file <- paste0(
+            path_to_census, "/census", year, "/", st, "/", tolower(st), "geo",
+            year, ext
+        )
+        if (!file.exists(geo_file)){
             not_downloaded <- c(not_downloaded, st)
         }
     }
@@ -155,6 +166,11 @@ read_decennial <- function(year,
     }
 
     # add population to table contents so that it will never empty
+    if (any(grepl("P0010001", table_contents))){
+        message("P0010001 is the population column.")
+    }
+
+    table_contents <- table_contents[!grepl("P0010001", table_contents)]
     table_contents <- c("population = P0010001", table_contents) %>%
         unique()
 
@@ -249,7 +265,7 @@ read_decennial_areas_ <- function(year,
     if (!is.null(areas)) geo_headers <- unique(dt_areas[, geoheader])
 
     # switch summary level and geocomponent
-    summary_level <- switch_summarylevel(summary_level)
+    summary_level <- switch_summarylevel(summary_level, year)
     geo_comp <- switch_geocomp(geo_comp)
 
 
@@ -271,7 +287,7 @@ read_decennial_areas_ <- function(year,
         # has much more geo_header data
         geo <- read_decennial_geo_(year, st,
                                    c(geo_headers, "STATE", "INTPTLON", "INTPTLAT"),
-                                   show_progress = TRUE) %>%
+                                   show_progress = show_progress) %>%
             setnames(c("INTPTLON", "INTPTLAT"), c("lon", "lat")) %>%
             # convert STATE fips to state abbreviation
             .[, state := convert_fips_to_names(STATE)] %>%
@@ -373,7 +389,7 @@ read_decennial_geoheaders_ <- function(year,
     if (!is.null(geo_headers)) geo_headers <- toupper(geo_headers)
 
     # switch summary level to code
-    summary_level <- switch_summarylevel(summary_level)
+    summary_level <- switch_summarylevel(summary_level, year)
     geo_comp <- switch_geocomp(geo_comp)
 
 
@@ -395,7 +411,7 @@ read_decennial_geoheaders_ <- function(year,
         # has much more geo_header data
         geo <- read_decennial_geo_(year, st,
                                    c(geo_headers, "STATE", "INTPTLON", "INTPTLAT"),
-                                   show_progress = TRUE) %>%
+                                   show_progress = show_progress) %>%
             setnames(c("INTPTLON", "INTPTLAT"), c("lon", "lat")) %>%
             # convert STATE fips to state abbreviation
             .[, state := convert_fips_to_names(STATE)] %>%
@@ -484,9 +500,17 @@ read_decennial_geo_ <- function(year,
 
 
     #=== read files and select columns ===
+    if (year == 2010){
+        file_extension = ".ur1"
+        dict_geoheader = dict_decennial_geoheader_2010
+    } else if (year == 2000){
+        file_extension = ".uf1"
+        dict_geoheader = dict_decennial_geoheader_2000
+    }
 
     file <- paste0(path_to_census, "/census", year, "/", state, "/", tolower(state),
-                   "geo", year, ".ur1")
+                   "geo", year, file_extension)
+
     # use "Latin-1" for encoding special spanish latters such as ñ in Cañada
     geo <- fread(file, header = FALSE, sep = "\n", encoding = "Latin-1" ,
                  showProgress = show_progress)
@@ -505,16 +529,16 @@ read_decennial_geo_ <- function(year,
                 # place variable in () to add new columns
                 dt[, (ref) := as.numeric(str_sub(
                     geo[, V1],
-                    dict_decennial_geoheader[reference == ref, start],
-                    dict_decennial_geoheader[reference == ref, end]
+                    dict_geoheader[reference == ref, start],
+                    dict_geoheader[reference == ref, end]
                 ))]
             } else if (ref %in% c("LOGRECNO", "SUMLEV", "GEOCOMP")) {
                 message(paste(ref, "is already included in return by default.\n"))
             } else {
                 dt[, (ref) := str_trim(str_sub(
                     geo[, V1],
-                    dict_decennial_geoheader[reference == ref, start],
-                    dict_decennial_geoheader[reference == ref, end]
+                    dict_geoheader[reference == ref, start],
+                    dict_geoheader[reference == ref, end]
                 ))]
             }
         }
@@ -558,17 +582,20 @@ read_decennial_1_file_tablecontents_ <- function(year,
 
     #=== read data ===
 
-    if (year == 2010){
-        lookup_decennial <- lookup_decennial_2010
-    }
+    lookup <- get(paste0("lookup_decennial_", year))
 
     # determine location of the flds in file_seg
-    all_contents <- lookup_decennial[file_segment == file_seg, reference]
+    all_contents <- lookup[file_segment == file_seg, reference]
     loc <- which(all_contents %in% table_contents)
     cols <- paste0("V", loc)
 
+    if (year == 2010){
+        file_extension = ".ur1"
+    } else if (year == 2000){
+        file_extension = ".uf1"
+    }
     file <- paste0(path_to_census, "/census", year, "/", state, "/", tolower(state),
-                   "000", file_seg, year, ".ur1")
+                   "000", file_seg, year, file_extension)
 
     if (show_progress) {
         cat(paste("Reading", state, "file", file_seg, "\n"))

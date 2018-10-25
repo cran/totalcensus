@@ -1,4 +1,4 @@
-#' Search FIPS codes
+#' Search FIPS Codes
 #'
 #' @description  Search FIPS code of a states, counties, county subdivisions, places, or
 #' consolidated cities in dataset \code{\link{dict_fips}}. The search also returns
@@ -11,14 +11,12 @@
 #' 162 to 160 in search results.
 #' The summary levels in \code{\link{dict_fips}} are 010, 040, 050, 061, 162, and 170.
 #' The level 061 is for Minor Civil Division (MCD)/Census County Division (CCD) (10,000+). It
-#' does not appear in \code{\link{dict_decennial_summarylevel}} and
-#' \code{\link{dict_acs_summarylevel}}, which instead have 060 for County Subdivision.
+#' does not appear in those used in decennial census and ACS surveys,
+#' which instead have 060 for County Subdivision.
 #' Level 061 is part of 060 and is replaced with 060 in order to use the census data. Similarly,
-#' both level 162 in \code{\link{dict_fips}} and l60 in \code{\link{dict_decennial_summarylevel}}
-#' and \code{\link{dict_decennial_summarylevel}} are for
-#' State-Place. Always use 160 in census data.
+#' 162 is replaced with 160.
 #'
-#' @param keyword keyword to be searched in NAMES or FIPS.
+#' @param keywords keyword to be searched in NAMES or FIPS.
 #' @param state abbreviation of a state.
 #' @param view display the search result with View if TRUE.
 #'
@@ -42,13 +40,14 @@
 #'
 #'
 
-search_fips <- function(keyword = "*", state = NULL, view = TRUE) {
+search_fips <- function(keywords = NULL, state = NULL, view = TRUE) {
 
     if (is.null(state)) state <- "*"
     dt <- dict_fips[state_abbr %like% toupper(state)]
 
-    keywords <- unlist(str_split(tolower(keyword), " "))
-    for (kw in keywords){
+    if (is.null(keywords)) keywords <- "*"
+    kws <- unlist(str_split(tolower(keywords), " "))
+    for (kw in kws){
         # combine all rows to form a new column for search
         dt <- dt[, comb := apply(dt[, c(1, 3:9)], 1, paste, collapse = " ")] %>%
             .[grepl(kw, tolower(comb))] %>%
@@ -58,14 +57,14 @@ search_fips <- function(keyword = "*", state = NULL, view = TRUE) {
     # change to match those in census summary files
     dt[SUMLEV == "061", SUMLEV := "060"][SUMLEV == "162", SUMLEV := "160"]
 
-    if (view) View(dt, paste(keyword, "found"))
+    if (view) View(dt, paste(keywords, "found"))
 
     return(dt)
 }
 
 
 
-#' Search CBSA code and title
+#' Search Core Based Statistical Area (CBSA)
 #'
 #' @description  Search CBSA code of Core Based Statistical Area in dataset \code{\link{dict_cbsa}}.
 #' The search also returns which CSA (Combined Statistical Area) that contains
@@ -75,7 +74,7 @@ search_fips <- function(keyword = "*", state = NULL, view = TRUE) {
 #' @details Quite often, multiple rows are returned. It is necessary
 #' to hand pick the right one you are really looking for.
 #'
-#' @param keyword keyword to be searched in CBSA or CBSA title.
+#' @param keywords keywords to be searched.
 #' @param view display the search result with View if TRUE.
 #'
 #' @return A data.table
@@ -96,18 +95,19 @@ search_fips <- function(keyword = "*", state = NULL, view = TRUE) {
 #'
 #'
 
-search_cbsa <- function(keyword = "*", view = TRUE) {
+search_cbsa <- function(keywords = NULL, view = TRUE) {
     dt <- dict_cbsa
 
-    keywords <- unlist(str_split(tolower(keyword), " "))
-    for (kw in keywords){
+    if (is.null(keywords)) keywords <- "*"
+    kws <- unlist(str_split(tolower(keywords), " "))
+    for (kw in kws){
         # combine all rows to form a new column for search
-        dt <- dt[, comb := apply(dt[, c(1, 2)], 1, paste, collapse = " ")] %>%
+        dt <- dt[, comb := apply(dt[, c(1, 2, 3, 4)], 1, paste, collapse = " ")] %>%
             .[grepl(kw, tolower(comb))] %>%
             .[, comb := NULL]
     }
 
-    if (view) View(dt, paste(keyword, "found"))
+    if (view) View(dt, paste(keywords, "found"))
 
     return(dt)
 }

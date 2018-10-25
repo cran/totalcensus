@@ -92,6 +92,9 @@ lookup_tablecontents <- function(table_contents, lookup){
     file_content <- lookup[reference %in% table_contents,
                            .(file_seg = file_segment,
                              table_contents = reference)] %>%
+        # if a table_content appears in multiple file_segs, keep only
+        # the first one
+        unique(by = "table_contents") %>%
         .[order_contents, on = .(table_contents = content)] %>%
         .[order(id)] %>%
         compress_datatable()
@@ -359,20 +362,21 @@ convert_areas <- function(areas) {
 
 
 
-add_geoheader <- function(dt, state, geo_headers, summary_level, survey = "acs"){
-    # When dt is a tract or block group level data.table obtained by reading
-    # decennial census or ACS 5-year survey and the geoheader "PLACE" or "COUSUB"
-    # is included in argument geo_headers, the codes
-    # for "PLACE" or "OCUSUB" are usually not provided, as a tract or block group
-    # may belong to multiple "PLACE" or "COUSUB". This function is to add them
-    # using data from Census 2010. If a tract or block group belongs to multiple
-    # PLACE or COUSUB, add additional rows to include the relationship.
+add_geoheader <- function(dt, state, geo_headers, summary_level,
+                          survey = "acs"){
+    # Add codes of "PLACE" or "COUSUB" to data.table dt when summary level is
+    # tract or block group.
+    #
+    # A tract or block group does not exclusively belong to a PLACE or COUSUB.
+    # So in summary 1, the code of PALCE and COUSUB is not provided for them.
+    # This function is to add the code using data from Census 2010. If a tract
+    # or block group belongs to multiple PLACE or COUSUB, add additional rows
+    # to shows the relationship.
     #
     # Args_____
-    # dt : the data.table read from decennial census or ACS 5-year survey.
-    # state : state of the data
-    # geo_headers : argument of geo_headers in function read_acs5year() or
-    #     read_decenial() that generated dt.
+    # dt : the data.table read from read_xxxx() functions.
+    # state : state of the data.
+    # geo_headers : argument of geo_headers in read_xxxx() functions.
     # summary_level : "140" for tract or "150" for block group.
     # survey : survey of dt, choose from "acs" and "decennial"
 
@@ -382,11 +386,14 @@ add_geoheader <- function(dt, state, geo_headers, summary_level, survey = "acs")
     path_to_census <- Sys.getenv("PATH_TO_CENSUS")
 
     if (survey == "acs"){
+
         if (summary_level %in% c("150", "*")){
             if ("PLACE" %in% geo_headers){
-                file <- paste0(path_to_census,
-                               "/generated_data/blkgrp_geoid_place/blkgrp_geoid_place_",
-                               state, ".csv")
+                file <- paste0(
+                    path_to_census,
+                    "/generated_data/blkgrp_geoid_place/blkgrp_geoid_place_",
+                    state, ".csv"
+                )
                 blkgrp <- fread(file, colClasses = "character") %>%
                     .[, .(GEOID, PLACE_tmp = PLACE)]
                 dt <- blkgrp[dt, on = .(GEOID), allow.cartesian=TRUE] %>%
@@ -395,9 +402,11 @@ add_geoheader <- function(dt, state, geo_headers, summary_level, survey = "acs")
             }
 
             if ("COUSUB" %in% geo_headers){
-                file <- paste0(path_to_census,
-                               "/generated_data/blkgrp_geoid_cousub/blkgrp_geoid_cousub_",
-                               state, ".csv")
+                file <- paste0(
+                    path_to_census,
+                    "/generated_data/blkgrp_geoid_cousub/blkgrp_geoid_cousub_",
+                    state, ".csv"
+                )
                 blkgrp <- fread(file, colClasses = "character") %>%
                     .[, .(GEOID, COUSUB_tmp = COUSUB)]
                 dt <- blkgrp[dt, on = "GEOID", allow.cartesian=TRUE] %>%
@@ -407,9 +416,11 @@ add_geoheader <- function(dt, state, geo_headers, summary_level, survey = "acs")
         }
         if (summary_level %in% c("140", "*")){
             if ("PLACE" %in% geo_headers){
-                file <- paste0(path_to_census,
-                               "/generated_data/tract_geoid_place/tract_geoid_place_",
-                               state, ".csv")
+                file <- paste0(
+                    path_to_census,
+                    "/generated_data/tract_geoid_place/tract_geoid_place_",
+                    state, ".csv"
+                )
                 tract <- fread(file, colClasses = "character") %>%
                     .[, .(GEOID, PLACE_tmp = PLACE)]
                 dt <- tract[dt, on = .(GEOID), allow.cartesian=TRUE] %>%
@@ -418,9 +429,11 @@ add_geoheader <- function(dt, state, geo_headers, summary_level, survey = "acs")
             }
 
             if ("COUSUB" %in% geo_headers){
-                file <- paste0(path_to_census,
-                               "/generated_data/tract_geoid_cousub/tract_geoid_cousub_",
-                               state, ".csv")
+                file <- paste0(
+                    path_to_census,
+                    "/generated_data/tract_geoid_cousub/tract_geoid_cousub_",
+                    state, ".csv"
+                )
                 tract <- fread(file, colClasses = "character") %>%
                     .[, .(GEOID, COUSUB_tmp = COUSUB)]
                 dt <- tract[dt, on = .(GEOID), allow.cartesian=TRUE] %>%
@@ -430,13 +443,14 @@ add_geoheader <- function(dt, state, geo_headers, summary_level, survey = "acs")
         }
     }
 
-
     if (survey == "decennial"){
         if (summary_level %in% c("150", "*")){
             if ("PLACE" %in% geo_headers){
-                file <- paste0(path_to_census,
-                               "/generated_data/blkgrp_geoid_place/blkgrp_geoid_place_",
-                               state, ".csv")
+                file <- paste0(
+                    path_to_census,
+                    "/generated_data/blkgrp_geoid_place/blkgrp_geoid_place_",
+                    state, ".csv"
+                )
                 blkgrp <- fread(file, colClasses = "character") %>%
                     .[, .(LOGRECNO, PLACE_tmp = PLACE)] %>%
                     .[, LOGRECNO := as.numeric(LOGRECNO)]
@@ -446,9 +460,11 @@ add_geoheader <- function(dt, state, geo_headers, summary_level, survey = "acs")
             }
 
             if ("COUSUB" %in% geo_headers){
-                file <- paste0(path_to_census,
-                               "/generated_data/blkgrp_geoid_cousub/blkgrp_geoid_cousub_",
-                               state, ".csv")
+                file <- paste0(
+                    path_to_census,
+                    "/generated_data/blkgrp_geoid_cousub/blkgrp_geoid_cousub_",
+                    state, ".csv"
+                )
                 blkgrp <- fread(file, colClasses = "character") %>%
                     .[, .(LOGRECNO, COUSUB_tmp = COUSUB)] %>%
                     .[, LOGRECNO := as.numeric(LOGRECNO)]
@@ -460,9 +476,11 @@ add_geoheader <- function(dt, state, geo_headers, summary_level, survey = "acs")
 
         if (summary_level %in% c("140", "*")){
             if ("PLACE" %in% geo_headers){
-                file <- paste0(path_to_census,
-                               "/generated_data/tract_geoid_place/tract_geoid_place_",
-                               state, ".csv")
+                file <- paste0(
+                    path_to_census,
+                    "/generated_data/tract_geoid_place/tract_geoid_place_",
+                    state, ".csv"
+                )
                 tract <- fread(file, colClasses = "character") %>%
                     .[, .(LOGRECNO, PLACE_tmp = PLACE)] %>%
                     .[, LOGRECNO := as.numeric(LOGRECNO)]
@@ -472,9 +490,11 @@ add_geoheader <- function(dt, state, geo_headers, summary_level, survey = "acs")
             }
 
             if ("COUSUB" %in% geo_headers){
-                file <- paste0(path_to_census,
-                               "/generated_data/tract_geoid_cousub/tract_geoid_cousub_",
-                               state, ".csv")
+                file <- paste0(
+                    path_to_census,
+                    "/generated_data/tract_geoid_cousub/tract_geoid_cousub_",
+                    state, ".csv"
+                )
                 tract <- fread(file, colClasses = "character") %>%
                     .[, .(LOGRECNO, COUSUB_tmp = COUSUB)] %>%
                     .[, LOGRECNO := as.numeric(LOGRECNO)]
@@ -490,16 +510,22 @@ add_geoheader <- function(dt, state, geo_headers, summary_level, survey = "acs")
 
 
 
-add_coord <- function(dt, state, geo_headers){
-    # When dt is read from ACS 1-year or 5-year survey, the coordinates are missing.
-    # In addition, the code of geo_headers are not complete. This function add
-    # coordinates and code to dt from Census 2010 data.
+add_coord <- function(dt, state, geo_headers = NULL){
+    # Add coordinates to dt read from ACS 1-year and ACS 5-year surveys.
+    #
+    # The summary file 1 of ACS 1-year or 5-year surveys does not have
+    # (lon, lat) of geographic area. In addition, it also has missing code of
+    # geo_headers. This function adds coordinates and codes to dt using data
+    # generated from Census 2010 summary file 1 based on GEOID. The data.table
+    # dt can be any data that conitains a GEOID column.
     #
     # Args_____
-    # dt : the data.table read from decennial census or ACS 5-year survey.
-    # state : state of the data
-    # geo_headers : argument of geo_headers in function read_acs5year() or
-    #     read_decenial() that generated dt.
+    # dt : the data.table read from decennial census or ACS 1year and 5-year
+    #     survey.
+    # state : state of the data. The generated data are split by state in order
+    #     save reading time.
+    # geo_headers : argument of geo_headers in read_xxxx() functions.
+
     path_to_census <- Sys.getenv("PATH_TO_CENSUS")
 
     file <- paste0(path_to_census, "/generated_data/geoid_coord/geoid_coord_",
@@ -517,12 +543,20 @@ add_coord <- function(dt, state, geo_headers){
 
 
 
-switch_summarylevel <- function(summary_level){
+switch_summarylevel <- function(summary_level, year = NULL){
     # This function switch summary level from plain text to code
     common_level <- c("state", "county", "county subdivision", "place",
                       "tract", "block group", "block")
 
     if (summary_level %in% common_level){
+        if (!is.null(year)){
+            if (year == 2000){
+                block_code <- "101"
+            } else if (year == 2010){
+                block_code <- "100"
+            }
+        }
+
         summary_level <- switch(summary_level,
                                 "state" = "040",
                                 "county" = "050",
@@ -530,7 +564,7 @@ switch_summarylevel <- function(summary_level){
                                 "place" = "160",
                                 "tract" = "140",
                                 "block group" = "150",
-                                "block" = "100")
+                                "block" = block_code)
     }
 
     return(summary_level)
@@ -564,4 +598,19 @@ convert_geocomp_name <- function(dt){
         .[GEOCOMP == "43", GEOCOMP := "rural"]
 
     return(dt)
+}
+
+
+select_columns <- function(df, contains){
+    # select column names that contain element in a vector contains
+
+    # Args____
+    # df: a data frame or data table
+    # contains: such as 2010:2013 and c("aaa", "bbb")
+
+    cols <- names(df)
+    selected <- str_detect(cols, paste0(contains, collapse = "|"))
+    selected_cols <- cols[selected]
+
+    return(selected_cols)
 }

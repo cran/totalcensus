@@ -5,7 +5,7 @@
 \title{Read decennial census data}
 \usage{
 read_decennial(year, states, table_contents = NULL, areas = NULL,
-  geo_headers = NULL, summary_level = "*", geo_comp = "total",
+  geo_headers = NULL, summary_level = NULL, geo_comp = "total",
   show_progress = TRUE)
 }
 \arguments{
@@ -26,17 +26,17 @@ For county, city, or town, must use the exact name as those in
 "Salt Lake City city, UT" must keep the "city" after "City".}
 
 \item{geo_headers}{vector of references of selected geographci headers to be
-included in the return. Browse geoheaders in \code{\link{dict_decennial_geoheader}}
-or search with \code{\link{search_geoheaders}}}
+included in the return. Search with \code{\link{search_geoheaders}}}
 
-\item{summary_level}{select which summary level to keep, "*" to keep all. It takes strings
+\item{summary_level}{select which summary level to keep, default to keep all. It takes strings
 including "state", "county", "county subdivision", "place", "tract", "block group",
 and "block" for the most common levels. It also take code for level. Search all codes with
-\code{\link{search_summarylevels}} or browse \code{\link{dict_decennial_summarylevel}} .}
+\code{\link{search_summarylevels}}.}
 
 \item{geo_comp}{select which geographic component to keep, "*" to keep every geo-component,
 "total" for "00", "urban" for "01", "urbanized area" for "04",
-"urban cluster" for "28", "rural" for "43". Others should input code
+"urban cluster" for "28", "rural" for "43". For all other geographic component,
+ use code,
 which can be found with \code{\link{search_geocomponents}}. Availability
 of geocomponent depends on summary level. State level contains all
 geographic component. County subdivision and higher level have "00",
