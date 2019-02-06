@@ -4,7 +4,8 @@
 \alias{search_geocomponents}
 \title{Search Geographic Components}
 \usage{
-search_geocomponents(survey, years = NULL, keywords = NULL, view = TRUE)
+search_geocomponents(survey, years = NULL, keywords = NULL,
+  view = TRUE)
 }
 \arguments{
 \item{survey}{survey type, including "dec" (or "decennial"), "acs1" or "acs5".}
@@ -40,7 +41,7 @@ bbb <- search_geocomponents("acs5", 2011:2015, "43", view = FALSE)
 \dontrun{
   # view all geocomponents
   search_geocomponents("dec")
-  search_geocomponents("acs")
+  search_geocomponents("acs5")
 }
 
 }

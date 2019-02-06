@@ -25,8 +25,6 @@
 #
 #
 
-
-
 generate_census_data_ <- function(states =  c(states_DC, "PR", "US")){
 
     # By default generate GEOID coordinate for each states, DC, PR and US
@@ -40,9 +38,15 @@ generate_census_data_ <- function(states =  c(states_DC, "PR", "US")){
                 path_to_census, '" to store the generated data.')
     }
 
+    # delete old file before each time fwrite to it as using append = TRUE
+    file_name <- paste0(path_to_census, "/generated_data/acs_geoid_name/acs_geoid_name.csv")
+    if (file.exists(file_name)){
+        file.remove(file_name)
+    }
+
 
     # all summary levels used in ACS data
-    acs_summarylevels <- c("040", "050", "060", "070",
+    acs_summarylevels <- c("010", "020", "030", "040", "050", "060", "070",
                            "140", "150",  "155", "160", "170", "172",
                            "230", "250", "251", "252", "254", "256", "258", "260", "269",
                            "270", "280", "283", "286", "290", "291", "292", "293", "294",
@@ -57,7 +61,8 @@ generate_census_data_ <- function(states =  c(states_DC, "PR", "US")){
                            "795", "860", "950", "960", "970")
 
     # generate all from census 2010 data
-    geoheaders <- c("INTPTLON", "INTPTLAT", "STATE", "PLACE", "COUNTY", "COUSUB", "TRACT", "BLKGRP",
+    geoheaders <- c("INTPTLON", "INTPTLAT", "REGION", "DIVISION", "STATE",
+                    "PLACE", "COUNTY", "COUSUB", "TRACT", "BLKGRP",
                     "BLOCK", "CD", "SLDU", "SLDL", "CBSA", "METDIV", "CSA", "CONCIT",
                     "ANRC", "AIANHH", "AIHHTLI", "AITSCE", "CNECTA", "NECTA",
                     "NECTADIV", "UA", "PUMA", "SDELM", "SDSEC", "SDUNI", "TTRACT",
@@ -82,6 +87,9 @@ generate_census_data_ <- function(states =  c(states_DC, "PR", "US")){
             # https://www.census.gov/geo/reference/geoidentifiers.html
             .[SUMLEV %in% acs_summarylevels] %>%
             # add GEOID for each summary levels
+            .[SUMLEV == "010", GEOID := paste0(SUMLEV, GEOCOMP, "US")] %>%
+            .[SUMLEV == "020", GEOID := paste0(SUMLEV, GEOCOMP, "US", REGION)] %>%
+            .[SUMLEV == "030", GEOID := paste0(SUMLEV, GEOCOMP, "US", DIVISION)] %>%
             .[SUMLEV == "040", GEOID := paste0(SUMLEV, GEOCOMP, "US", STATE)] %>%
             .[SUMLEV == "050", GEOID := paste0(SUMLEV, GEOCOMP, "US", STATE, COUNTY)] %>%
             .[SUMLEV == "060", GEOID := paste0(SUMLEV, GEOCOMP, "US", STATE, COUNTY, COUSUB)] %>%
@@ -169,7 +177,6 @@ generate_census_data_ <- function(states =  c(states_DC, "PR", "US")){
             .[SUMLEV == "950", GEOID := paste0(SUMLEV, GEOCOMP, "US", STATE, SDELM)] %>%
             .[SUMLEV == "960", GEOID := paste0(SUMLEV, GEOCOMP, "US", STATE, SDSEC)] %>%
             .[SUMLEV == "970", GEOID := paste0(SUMLEV, GEOCOMP, "US", STATE, SDUNI)] %>%
-            setnames(c("INTPTLON", "INTPTLAT"), c("lon", "lat")) %>%
             # .[, LOGRECNO := NULL] %>%
             unique() %>%
             # CBSA of Los Angeles metro changed from 31100 to 31080 in 2013
@@ -178,14 +185,22 @@ generate_census_data_ <- function(states =  c(states_DC, "PR", "US")){
 
 
         # GEOID from acs 5-year estimate, which includes all GEOID in 1-year estimate
-        geoid_acs5year <- read_acs5year_geo_(year = 2015, state = st) %>%
+        geoid_acs5year <- read_acs5year_geo_(year = 2010, state = st) %>%
             # only interest in these SUMLEV
             .[SUMLEV %in% acs_summarylevels] %>%
-            .[, .(NAME, GEOID)]
+            .[, .(GEOID, acs_NAME = NAME)]
+
+        # acs_geoid_name save to csv as one file
+        if(!dir.exists(paste0(path_to_census, "/generated_data/acs_geoid_name"))){
+            dir.create(paste0(path_to_census, "/generated_data/acs_geoid_name"))
+        }
+        file_name <- paste0(path_to_census, "/generated_data/acs_geoid_name/acs_geoid_name.csv")
+        fwrite(geoid_acs5year, file = file_name, append = TRUE)
 
         # combine and reorder columns
         first4 <- c("GEOID", "lon", "lat", "NAME")
         GEOID_coordinate <- geoid_coord[geoid_acs5year, on = .(GEOID)] %>%
+            .[, acs_NAME := NULL] %>%
             setcolorder(c(first4, setdiff(names(.), first4)))
 
         # save to csv
@@ -306,4 +321,11 @@ generate_fips_ <- function(geo_header, st, geo){
     file_name <- paste0(path_to_census,
                         "/generated_data/fips_", geoheader, "/", geoheader, "_fips_", st, ".csv")
     fwrite(fips, file = file_name)
+}
+
+
+# generate GEOID - NAME pairs from ACS data ==================================
+generate_acs_geoid_name_pair_ <- function(year = 2015){
+    geo10 <- read_acs5year(year, c(states_DC, "US", "PR")) %>%
+        .[, .(GEOID, NAME)]
 }

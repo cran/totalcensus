@@ -97,8 +97,19 @@ read_acs1year <- function(year,
     path_to_census <- Sys.getenv("PATH_TO_CENSUS")
 
     # check if need to download generated data from census2010
-    if (!file.exists(paste0(path_to_census, "/generated_data"))){
+    generated_data <- paste0(path_to_census, "/generated_data")
+    if (!file.exists(generated_data)){
         download_generated_data()
+    } else {
+        version_file <- paste0(generated_data, "/version.txt")
+        if (!file.exists(version_file)){
+            download_generated_data()
+        } else {
+            version = readChar(version_file, 5)
+            if (version != "0.6.0"){
+                download_generated_data()
+            }
+        }
     }
 
     # check whether to download census data
@@ -240,14 +251,14 @@ read_acs1year_filesegment_ <- function(year,
     })
 
 
-    # convert non-numeric columns to numeric
-    # some missing data are denoted as ".", which lead to the whole column read
-    # as character
-    for (col in table_contents){
-        if (is.character(dt[, get(col)])){
-            dt[, (col) := as.numeric(get(col))]
-        }
-    }
+    # # convert non-numeric columns to numeric
+    # # some missing data are denoted as ".", which lead to the whole column read
+    # # as character
+    # for (col in table_contents){
+    #     if (is.character(dt[, get(col)])){
+    #         dt[, (col) := as.numeric(get(col))]
+    #     }
+    # }
 
 
     # add "_e" or "_m" to show the data is estimate or margin
@@ -273,6 +284,14 @@ read_acs1year_1_file_tablecontents_ <- function(year,
         .[, c("LOGRECNO", table_contents), with = FALSE] %>%
         setkey(LOGRECNO)
 
+    # convert non-numeric columns to numeric
+    # some missing data are denoted as ".", which lead to the whole column read
+    # as character
+    for (col in table_contents){
+        if (is.character(dt[, get(col)])){
+            dt[, (col) := as.numeric(get(col))]
+        }
+    }
 
     return(dt)
 }
@@ -404,8 +423,10 @@ read_acs1year_areas_ <- function(year,
 
     lst_state <- list()
     for (st in states) {
-        geo <- read_acs1year_geo_(year, st, geo_headers,
+        geo <- read_acs1year_geo_(year, st, c(geo_headers, "STATE"),
                                   show_progress = show_progress) %>%
+            # convert STATE fips to state abbreviation
+            .[, state := convert_fips_to_names(STATE)] %>%
             setkey(LOGRECNO)
 
 
@@ -442,6 +463,7 @@ read_acs1year_areas_ <- function(year,
 
     combined <- rbindlist(lst_state) %>%
         .[, LOGRECNO := NULL] %>%
+        .[, STATE := NULL] %>%
         convert_geocomp_name()
 
     if (!is.null(table_contents)){
@@ -467,8 +489,8 @@ read_acs1year_areas_ <- function(year,
     }
 
     # reorder columns
-    begin <- c("area", "GEOID", "NAME", "STUSAB")
-    end <- c("GEOCOMP", "SUMLEV", "lon", "lat")
+    begin <- c("area", "GEOID", "NAME")
+    end <- c("GEOCOMP", "SUMLEV", "state", "STUSAB", "lon", "lat")
     if (with_margin){
         # estimate and margin together
         contents <- paste0(rep(table_contents, each = 2),
@@ -514,8 +536,11 @@ read_acs1year_geoheaders_ <- function(year,
 
     lst_state <- list()
     for (st in states) {
-        geo <- read_acs1year_geo_(year, st, geo_headers,
+        geo <- read_acs1year_geo_(year, st,
+                                  c(geo_headers, "STATE"),
                                   show_progress = show_progress) %>%
+            # convert STATE fips to state abbreviation
+            .[, state := convert_fips_to_names(STATE)] %>%
             setkey(LOGRECNO)
 
         # read estimate and margin from each file
@@ -552,14 +577,17 @@ read_acs1year_geoheaders_ <- function(year,
         .[, LOGRECNO := NULL] %>%
         convert_geocomp_name()
 
+    if (!"STATE" %in% geo_headers){
+        combined[, STATE := NULL]
+    }
 
     if (!is.null(table_contents)){
         setnames(combined, paste0(table_contents, "_e"), table_contents)
     }
 
     # reorder columns
-    begin <- c("GEOID", "NAME", "STUSAB")
-    end <- c("GEOCOMP", "SUMLEV", "lon", "lat")
+    begin <- c("GEOID", "NAME")
+    end <- c("GEOCOMP", "SUMLEV", "state", "STUSAB", "lon", "lat")
 
     if (with_margin){
         # estimate and margin together

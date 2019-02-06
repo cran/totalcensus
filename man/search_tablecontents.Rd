@@ -4,7 +4,8 @@
 \alias{search_tablecontents}
 \title{Search Table Contents}
 \usage{
-search_tablecontents(survey, years = NULL, keywords = NULL, view = TRUE)
+search_tablecontents(survey, years = NULL, keywords = NULL,
+  view = TRUE)
 }
 \arguments{
 \item{survey}{survey type, including "dec" (or "decennial"), "acs1" or "acs5".}
@@ -29,9 +30,6 @@ table_contents argument in function \code{\link{read_decennial}},
 # Change view = TRUE (default) to View the returned data.
 # search by what you want
 aaa <- search_tablecontents("dec", 2000, "federal prison", view = FALSE)
-
-# search by table reference
-bbb <- search_tablecontents("acs1", 2010:2015, "B02003", view = FALSE)
 
 \dontrun{
   # view all decennial census table contents
