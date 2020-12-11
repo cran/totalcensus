@@ -54,8 +54,8 @@ search_tablecontents <- function(survey, years = NULL, keywords = NULL, view = T
                    "NA means data not collected."))
         dt <- generate_acs5_tablecontents_()
         if (!is.null(years)){
-            if (min(years) < 2009 | max(years) > 2018){
-                message("Only 2009 - 2017 are available for acs 5 year surveys.")
+            if (min(years) < 2009 | max(years) > 2019){
+                message("Only 2009 - 2019 are available for acs 5 year surveys.")
                 return(NULL)
             }
             selected_cols <- select_columns(dt, years)
@@ -156,8 +156,8 @@ search_geoheaders <- function(survey, years = NULL, keywords = NULL, view = TRUE
     } else if (survey == "acs5"){
         dt <- generate_acs5_geoheaders_()
         if (!is.null(years)){
-            if (min(years) < 2009 | max(years) > 2016){
-                message("Only 2009 - 2016 are available for acs 5 year surveys.")
+            if (min(years) < 2009 | max(years) > 2019){
+                message("Only 2009 - 2019 are available for acs 5 year surveys.")
                 return(NULL)
             }
 
@@ -176,8 +176,8 @@ search_geoheaders <- function(survey, years = NULL, keywords = NULL, view = TRUE
     } else if (survey == "acs1"){
         dt <- generate_acs1_geoheaders_()
         if (!is.null(years)){
-            if (min(years) < 2005 | max(years) > 2017){
-                message("Only 2005 - 2017 are available for acs 1 year surveys.")
+            if (min(years) < 2005 | max(years) > 2019){
+                message("Only 2005 - 2019 are available for acs 1 year surveys.")
                 return(NULL)
             }
 
@@ -275,8 +275,8 @@ search_summarylevels <- function(survey, years=NULL, keywords = NULL, view = TRU
     } else if (survey == "acs5"){
         dt <- dict_acs5_summarylevel
         if (!is.null(years)){
-            if (min(years) < 2009 | max(years) > 2016){
-                message("Only 2009 - 2016 are available for acs 5 year surveys.")
+            if (min(years) < 2009 | max(years) > 2019){
+                message("Only 2009 - 2019 are available for acs 5 year surveys.")
                 return(NULL)
             }
 
@@ -405,8 +405,8 @@ search_geocomponents <- function(survey, years = NULL, keywords = NULL, view = T
 
     } else if (survey == "acs5"){
         if (!is.null(years)){
-            if (min(years) < 2009 | max(years) > 2016){
-                message("Only 2009 - 2016 are available for acs 5 year surveys.")
+            if (min(years) < 2009 | max(years) > 2019){
+                message("Only 2009 - 2019 are available for acs 5 year surveys.")
                 return(NULL)
             }
         }
@@ -415,8 +415,8 @@ search_geocomponents <- function(survey, years = NULL, keywords = NULL, view = T
     } else if (survey == "acs1"){
         dt <- dict_acs1_geocomponent
         if (!is.null(years)){
-            if (min(years) < 2005 | max(years) > 2017){
-                message("Only 2005 - 2017 are available for acs 1 year surveys.")
+            if (min(years) < 2005 | max(years) > 2019){
+                message("Only 2005 - 2019 are available for acs 1 year surveys.")
                 return(NULL)
             }
 
@@ -526,8 +526,8 @@ search_tables <- function(survey, years = NULL, keywords = NULL, view = TRUE){
         # generated in data_raw/acs with read_acsxyear()
         dt <- dict_acs5_table
         if (!is.null(years)){
-            if (min(years) < 2009 | max(years) > 2018){
-                message("Only 2009 - 2018 are available for acs 5 year surveys.")
+            if (min(years) < 2009 | max(years) > 2019){
+                message("Only 2009 - 2019 are available for acs 5 year surveys.")
                 return(NULL)
             }
 
@@ -538,8 +538,8 @@ search_tables <- function(survey, years = NULL, keywords = NULL, view = TRUE){
     } else if (survey == "acs1"){
         dt <- dict_acs1_table
         if (!is.null(years)){
-            if (min(years) < 2005 | max(years) > 2018){
-                message("Only 2005 - 2018 are available for acs 1 year surveys.")
+            if (min(years) < 2005 | max(years) > 2019){
+                message("Only 2005 - 2019 are available for acs 1 year surveys.")
                 return(NULL)
             }
 
@@ -706,6 +706,7 @@ generate_acs5_tablecontents_ <- function(){
     acs5_2016 <- modify_lookup_table_(5, 2016)
     acs5_2017 <- modify_lookup_table_(5, 2017)
     acs5_2018 <- modify_lookup_table_(5, 2018)
+    acs5_2019 <- modify_lookup_table_(5, 2019)
 
     dict_acs_tablecontent <- reduce(list(acs5_2009,
                                          acs5_2010,
@@ -716,7 +717,8 @@ generate_acs5_tablecontents_ <- function(){
                                          acs5_2015,
                                          acs5_2016,
                                          acs5_2017,
-                                         acs5_2018),
+                                         acs5_2018,
+                                         acs5_2019),
                                     merge, by = "reference", all = TRUE) %>%
 
         # add the following lines for year since 2013
@@ -738,11 +740,14 @@ generate_acs5_tablecontents_ <- function(){
         .[!is.na(acs5_2018), ":=" (table_content = content_acs5_2018,
                                    table_name = name_acs5_2018,
                                    universe = universe_acs5_2018)] %>%
+        .[!is.na(acs5_2019), ":=" (table_content = content_acs5_2019,
+                                   table_name = name_acs5_2019,
+                                   universe = universe_acs5_2019)] %>%
 
         # include all years and surveys
         .[, .(reference, table_content, table_name,
-              acs5_2018, acs5_2017, acs5_2016, acs5_2015, acs5_2014,
-              acs5_2013, acs5_2012, acs5_2011,
+              acs5_2019, acs5_2018, acs5_2017, acs5_2016, acs5_2015,
+              acs5_2014, acs5_2013, acs5_2012, acs5_2011,
               acs5_2010, acs5_2009,
               universe)]
 }
