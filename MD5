@@ -1,4 +1,4 @@
-f98dd6f1d73ab1ff539c38f93e77cb2a *DESCRIPTION
+a1b896d286f279454ac1bd7a70406978 *DESCRIPTION
 fcd2729cc6da75dcc0b1bc32afbf45bf *LICENSE
 9218f045ef54c9f376d7ad253bf07499 *NAMESPACE
 6a205a3f3a05fbce0e1bd3f5be92be60 *R/convert_fips_and_names.R
@@ -6,12 +6,12 @@ e627f119070dc94f4bf0d4874921f725 *R/data_acs.R
 d2e7a4ed33d76fe297387afaae3c4d8d *R/data_decennial.R
 df85b3d317ce4ac59664f29f270b7108 *R/data_fips_cbsa.R
 8dc355ed75b5bbfe2f50fad8aa62dce5 *R/data_states_DC.R
-ea704c7255109a3c2e0290ccaaf9f885 *R/download_census.R
+9f889d7e69772e1b87c4552b68e27f7c *R/download_census.R
 7d667acd714507c98fff9c67c6f3fe8e *R/generate_data_from_census2010.R
 221320b213cbdce6fefd98b4d8f888e8 *R/quiet_global_variable_in_cran_check.R
 2cbdaecc1d52fb179eb942bbcb5dee27 *R/read_acs1year.R
 47f8a439b5c6fcdde624bd80552815ad *R/read_acs5year.R
-2a7bd4f5139a8aae9bae0daf92e9f6c1 *R/read_decennial.R
+fe8673a1261d265a3ebeef8239693735 *R/read_decennial.R
 3b0ecabdf36a9530eacf9c3585e12a86 *R/search_census_and_acs.R
 e8e63035746d9da46f0bd8f9d6833f40 *R/search_fips_cbsa.R
 f7a495ea7c080e2224c990b3aa42a4f2 *R/set_path_to_census.R
